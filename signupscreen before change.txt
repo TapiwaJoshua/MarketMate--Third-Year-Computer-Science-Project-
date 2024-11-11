@@ -1,0 +1,208 @@
+import React from "react";
+import {
+  View,
+  Text,
+  SafeAreaView,
+  ScrollView,
+  Image,
+  TextInput,
+  Alert,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
+import Input from "./../../Components/Input.jsx";
+import { useState, useCallback, useReducer } from "react";
+import { reducer } from "./../../utils/reducers/formReducers.js";
+import { validateInput } from "../../utils/actions/formActions.js";
+import { useNavigation } from "@react-navigation/native";
+import { useDispatch } from "react-redux";
+import { signUp } from "../../utils/actions/authActions.js";
+import { useEffect } from "react";
+import { Picker } from "@react-native-picker/picker";
+import * as ImagePicker from "expo-image-picker";
+
+const isTestMode = true;
+
+const initialState = {
+  inputvalues: {
+    fullname: isTestMode ? "Tapiwa Joshua" : "",
+    email: isTestMode ? "example@example.com" : "",
+    address: isTestMode ? "House No. Blank, Blank, Zambia" : "",
+    password: isTestMode ? "********" : "",
+  },
+  inputValidities: {
+    fullname: false,
+    email: false,
+    address: false,
+    password: false,
+  },
+  formIsValid: false,
+};
+export default function SignupScreen() {
+  const [image, setImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState();
+  const [formState, dispatchFormState] = useReducer(reducer, initialState);
+  const dispatch = useDispatch();
+
+  let userImage;
+
+  const pickImage = async () => {
+    // No permissions request is necessary for launching the image library
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    console.log(result);
+    userImage = result;
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImage(result.assets[0].uri);
+    } else {
+      console.log("Image picking was canceled or no assets found");
+    }
+  };
+
+  const inputChangedHandler = useCallback(
+    (inputId, inputValue) => {
+      const result = validateInput(inputId, inputValue);
+      dispatchFormState({ inputId, validationResult: result, inputValue });
+    },
+    [dispatchFormState]
+  );
+
+  const navigation = useNavigation();
+
+  const handleNavigateToLogin = () => {
+    navigation.navigate("LoginScreen");
+  };
+
+  const authHandler = async () => {
+    try {
+      setIsLoading(true);
+      const action = signUp(
+        formState.inputValues.fullName,
+        formState.inputValues.email,
+        formState.inputValues.address,
+        formState.inputValues.password,
+        userImage
+      );
+      await dispatch(action);
+
+      Alert.alert("Success", "Account Created Successfully!");
+      setError(null);
+      setIsLoading(false);
+      handleNavigateToLogin();
+    } catch (error) {
+      console.log(error);
+      setIsLoading(false);
+      setError(error.message);
+    }
+  };
+
+  useEffect(() => {
+    if (error) {
+      return Alert.alert("An Error Occured", error);
+    }
+  }, [error]);
+
+  return (
+    <SafeAreaView className="flex-1 bg-white">
+      <ScrollView className="flex-1 p-4">
+        <View className="items-start justify-start">
+          <Image
+            source={require("./../../assets/Images/MarketMate.jpg")}
+            resizeMode="contain"
+            className="w-32 h-32 mb-8 mt-20"
+          />
+        </View>
+        <View>
+          <Text className="text-[25px] text-green-700 font-bold mb-4">
+            Sign Up
+          </Text>
+          <Text className="text-[18px] text-green-700 font-bold mb-4">
+            Create an Account using your email
+          </Text>
+        </View>
+        <View className="my-6">
+          <TouchableOpacity onPress={pickImage}>
+            {image ? (
+              <Image
+                source={{ uri: image }}
+                style={{ width: 100, height: 100, borderRadius: 15 }}
+                onError={(e) =>
+                  console.log("Image load error:", e.nativeEvent.error)
+                }
+              />
+            ) : (
+              <Image
+                source={require(".//..//../assets/Images/placeholder-image.png")}
+                style={{ width: 100, height: 100, borderRadius: 15 }}
+              />
+            )}
+          </TouchableOpacity>
+          <Input
+            id="fullName"
+            placeholder=" Full Name"
+            placeholderTextColor="green"
+            errorText={formState.inputValidities["fullName"]}
+            onInputChanged={inputChangedHandler}
+            className="border border-green-700 rounded-md p-2 text-green-700"
+          />
+          <Input
+            id="email"
+            placeholder="Email Address"
+            placeholderTextColor="green"
+            errorText={formState.inputValidities["email"]}
+            onInputChanged={inputChangedHandler}
+            className="border border-green-700 rounded-md p-2 text-green-700"
+          />
+          <Input
+            id="address"
+            placeholder="Residential Address"
+            errorText={formState.inputValidities["address"]}
+            onInputChanged={inputChangedHandler}
+            placeholderTextColor="green"
+            className="border border-green-700 rounded-md p-2 text-green-700"
+          />
+          <Input
+            id="password"
+            placeholder="Password"
+            placeholderTextColor="green"
+            errorText={formState.inputValidities["password"]}
+            onInputChanged={inputChangedHandler}
+            className="border border-green-700 rounded-md p-2 text-green-700"
+          />
+          <TouchableOpacity
+            onPress={authHandler}
+            isLoading={isLoading}
+            className="p-3 bg-green-800 rounded-full mt-8"
+          >
+            <Text className="text-white text-lg font-bold text-center">
+              SIGN UP
+            </Text>
+          </TouchableOpacity>
+          <View style={StyleSheet.bottomContainer}>
+            <TouchableOpacity onPress={handleNavigateToLogin}>
+              <Text className="text-green-700 text-center text-lg mt-9">
+                Already have an Account? Sign In
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const Styles = StyleSheet.create({
+  bottomContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 2,
+  },
+});

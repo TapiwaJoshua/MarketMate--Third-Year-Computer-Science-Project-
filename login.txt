@@ -1,0 +1,56 @@
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import React from "react";
+import * as WebBrowser from "expo-web-browser";
+import { useWarmUpBrowser } from "../../hooks/warmUpBrowser";
+import { useOAuth } from "@clerk/clerk-expo";
+import * as Linking from "expo-linking";
+
+WebBrowser.maybeCompleteAuthSession();
+export default function LoginScreen() {
+  useWarmUpBrowser();
+
+  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+
+  const onPress = React.useCallback(async () => {
+    try {
+      const { createdSessionId, signIn, signUp, setActive } =
+        await startOAuthFlow({
+          redirectUrl: Linking.createURL("/dashboard", { scheme: "myapp" }),
+        });
+
+      if (createdSessionId) {
+        setActive({ session: createdSessionId });
+      } else {
+        // Use signIn or signUp for next steps such as MFA
+      }
+    } catch (err) {
+      console.error("OAuth error", err);
+    }
+  }, []);
+
+  return (
+    <View> 
+      <Image
+        source={require("./../../assets/Images/Home.jpg")}
+        className="mt-11 w-full h-[290px] object-cover"
+      />
+      <View className="p-8 bg-green-100 mt-[-20px] rounded-t-3xl">
+        <Text className="text-[50px] text-green-700 font-bold align-middle text-center">
+          Market Mate
+        </Text>
+        <Text className="text-[25px] text-slate-600 text-center mt-6">
+          A platform for local vendors and small-scale farmers to buy and sell
+          goods.
+        </Text>
+        <TouchableOpacity
+          onPress={onPress}
+          className="p-4 bg-green-500 rounded-full mt-20"
+        >
+          <Text className="text-white text-xl font-bold text-center">
+            Get Started
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
